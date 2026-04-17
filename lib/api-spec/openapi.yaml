@@ -3,13 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: MediConnect - Patient and Doctor Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profile management
+  - name: messages
+    description: Messaging between patients and doctors
+  - name: appointments
+    description: Calendar and appointment management
+  - name: vitals
+    description: Patient vital sign logs
+  - name: medications
+    description: Medication management
+
 paths:
   /healthz:
     get:
@@ -24,6 +35,528 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # User Profile Endpoints
+  /users/me:
+    get:
+      operationId: getMyProfile
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+    put:
+      operationId: updateMyProfile
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserProfileBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+
+  /users/me/complete-onboarding:
+    post:
+      operationId: completeOnboarding
+      tags: [users]
+      summary: Complete user onboarding (set role)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteOnboardingBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "400":
+          description: Bad request
+
+  /users/doctors:
+    get:
+      operationId: getDoctors
+      tags: [users]
+      summary: Get list of all doctors
+      responses:
+        "200":
+          description: List of doctors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DoctorProfile"
+
+  /users/my-patients:
+    get:
+      operationId: getMyPatients
+      tags: [users]
+      summary: Get list of patients for the current doctor
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientProfile"
+        "403":
+          description: Forbidden - not a doctor
+
+  /users/add-patient:
+    post:
+      operationId: addPatient
+      tags: [users]
+      summary: Doctor adds a patient to their list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPatientBody"
+      responses:
+        "200":
+          description: Success
+        "403":
+          description: Forbidden - not a doctor
+        "404":
+          description: Patient not found
+
+  /users/my-doctor:
+    get:
+      operationId: getMyDoctor
+      tags: [users]
+      summary: Get the doctor assigned to the current patient
+      responses:
+        "200":
+          description: Doctor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorProfile"
+        "404":
+          description: No doctor assigned
+
+  # Messaging Endpoints
+  /messages/conversations:
+    get:
+      operationId: getConversations
+      tags: [messages]
+      summary: Get list of conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+
+  /messages/conversations/{contactId}:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: Get messages in a conversation
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message to a contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "403":
+          description: Forbidden
+
+  # Appointment Endpoints
+  /appointments/my-appointments:
+    get:
+      operationId: getMyAppointments
+      tags: [appointments]
+      summary: Get appointments for the current user
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  /appointments/available-slots:
+    get:
+      operationId: getAvailableSlots
+      tags: [appointments]
+      summary: Get available appointment slots for the patient's doctor
+      responses:
+        "200":
+          description: List of available time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentSlot"
+
+  /appointments/slots:
+    post:
+      operationId: addAppointmentSlot
+      tags: [appointments]
+      summary: Doctor adds an available appointment slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAppointmentSlotBody"
+      responses:
+        "201":
+          description: Slot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentSlot"
+        "400":
+          description: Slot already exists or invalid
+        "403":
+          description: Forbidden - not a doctor
+
+  /appointments/request:
+    post:
+      operationId: requestAppointment
+      tags: [appointments]
+      summary: Patient requests an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestAppointmentBody"
+      responses:
+        "201":
+          description: Appointment request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "403":
+          description: Forbidden - not a patient
+
+  /appointments/requests:
+    get:
+      operationId: getAppointmentRequests
+      tags: [appointments]
+      summary: Get pending appointment requests for the doctor
+      responses:
+        "200":
+          description: List of pending requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+        "403":
+          description: Forbidden - not a doctor
+
+  /appointments/{id}/respond:
+    post:
+      operationId: respondToAppointment
+      tags: [appointments]
+      summary: Doctor accepts or declines an appointment request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondToAppointmentBody"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  # Vitals Endpoints
+  /vitals:
+    get:
+      operationId: getMyVitals
+      tags: [vitals]
+      summary: Get all vital logs for the current patient
+      responses:
+        "200":
+          description: List of vital logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VitalLog"
+    post:
+      operationId: addVitalLog
+      tags: [vitals]
+      summary: Patient adds a new vital log
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddVitalLogBody"
+      responses:
+        "201":
+          description: Vital log created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VitalLog"
+        "403":
+          description: Forbidden - not a patient
+
+  /vitals/critical:
+    get:
+      operationId: getCriticalVitals
+      tags: [vitals]
+      summary: Get critical vitals for all of the doctor's patients
+      responses:
+        "200":
+          description: List of critical vital alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CriticalVital"
+        "403":
+          description: Forbidden - not a doctor
+
+  /vitals/critical/{id}/dismiss:
+    post:
+      operationId: dismissCriticalVital
+      tags: [vitals]
+      summary: Doctor dismisses/crosses out a critical vital
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vital log updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VitalLog"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /vitals/patient/{patientId}:
+    get:
+      operationId: getPatientVitals
+      tags: [vitals]
+      summary: Get all vital logs for a specific patient (doctor only)
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of vital logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VitalLog"
+        "403":
+          description: Forbidden
+
+  # Medication Endpoints
+  /medications/my:
+    get:
+      operationId: getMyMedications
+      tags: [medications]
+      summary: Get current and past medications for the patient
+      responses:
+        "200":
+          description: Patient medications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicationList"
+
+  /medications/patient/{patientId}:
+    get:
+      operationId: getPatientMedications
+      tags: [medications]
+      summary: Get medications for a specific patient (doctor only)
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient medications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicationList"
+        "403":
+          description: Forbidden
+
+  /medications:
+    post:
+      operationId: addMedication
+      tags: [medications]
+      summary: Doctor adds a medication for a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMedicationBody"
+      responses:
+        "201":
+          description: Medication created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "403":
+          description: Forbidden - not a doctor
+
+  /medications/{id}:
+    patch:
+      operationId: updateMedication
+      tags: [medications]
+      summary: Update a medication (e.g. mark as past)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMedicationBody"
+      responses:
+        "200":
+          description: Updated medication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  # Dashboard/Summary Endpoints
+  /dashboard/patient-summary:
+    get:
+      operationId: getPatientDashboardSummary
+      tags: [users]
+      summary: Get dashboard summary for patient (home screen data)
+      responses:
+        "200":
+          description: Patient dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientDashboardSummary"
+        "403":
+          description: Forbidden
+
+  /dashboard/doctor-summary:
+    get:
+      operationId: getDoctorDashboardSummary
+      tags: [users]
+      summary: Get dashboard summary for doctor (home screen data)
+      responses:
+        "200":
+          description: Doctor dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoctorDashboardSummary"
+        "403":
+          description: Forbidden
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +567,505 @@ components:
       required:
         - status
 
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        role:
+          type: ["string", "null"]
+          enum: ["patient", "doctor", null]
+        name:
+          type: string
+        email:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        heightCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        conditions:
+          type: ["string", "null"]
+        qualifications:
+          type: ["string", "null"]
+        specialty:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - clerkId
+        - name
+        - email
+        - createdAt
+
+    UpdateUserProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        heightCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        conditions:
+          type: ["string", "null"]
+        qualifications:
+          type: ["string", "null"]
+        specialty:
+          type: ["string", "null"]
+
+    CompleteOnboardingBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: ["patient", "doctor"]
+        name:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        heightCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        conditions:
+          type: ["string", "null"]
+        qualifications:
+          type: ["string", "null"]
+        specialty:
+          type: ["string", "null"]
+      required:
+        - role
+        - name
+
+    PatientProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        dateOfBirth:
+          type: ["string", "null"]
+        heightCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        conditions:
+          type: ["string", "null"]
+      required:
+        - id
+        - clerkId
+        - name
+        - email
+
+    DoctorProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        qualifications:
+          type: ["string", "null"]
+        specialty:
+          type: ["string", "null"]
+        nextAppointment:
+          type: ["string", "null"]
+      required:
+        - id
+        - clerkId
+        - name
+        - email
+
+    AddPatientBody:
+      type: object
+      properties:
+        patientClerkId:
+          type: string
+      required:
+        - patientClerkId
+
+    Conversation:
+      type: object
+      properties:
+        contactId:
+          type: string
+        contactName:
+          type: string
+        contactRole:
+          type: string
+        lastMessage:
+          type: ["string", "null"]
+        lastMessageAt:
+          type: ["string", "null"]
+        unreadCount:
+          type: integer
+      required:
+        - contactId
+        - contactName
+        - contactRole
+        - unreadCount
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: string
+        receiverId:
+          type: string
+        content:
+          type: string
+        sentAt:
+          type: string
+        isRead:
+          type: boolean
+      required:
+        - id
+        - senderId
+        - receiverId
+        - content
+        - sentAt
+        - isRead
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    AppointmentSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        slotDate:
+          type: string
+        slotTime:
+          type: string
+        isAvailable:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - doctorId
+        - doctorName
+        - slotDate
+        - slotTime
+        - isAvailable
+        - createdAt
+
+    AddAppointmentSlotBody:
+      type: object
+      properties:
+        slotDate:
+          type: string
+        slotTime:
+          type: string
+      required:
+        - slotDate
+        - slotTime
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: string
+        patientName:
+          type: string
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        requestedDate:
+          type: string
+        requestedTime:
+          type: string
+        status:
+          type: string
+          enum: ["pending", "accepted", "declined"]
+        doctorNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - patientId
+        - patientName
+        - doctorId
+        - doctorName
+        - requestedDate
+        - requestedTime
+        - status
+        - createdAt
+
+    RequestAppointmentBody:
+      type: object
+      properties:
+        requestedDate:
+          type: string
+        requestedTime:
+          type: string
+      required:
+        - requestedDate
+        - requestedTime
+
+    RespondToAppointmentBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["accepted", "declined"]
+        doctorNote:
+          type: ["string", "null"]
+      required:
+        - status
+
+    VitalLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: string
+        heartRate:
+          type: ["integer", "null"]
+        respirationRate:
+          type: ["integer", "null"]
+        systolicBp:
+          type: ["integer", "null"]
+        diastolicBp:
+          type: ["integer", "null"]
+        spo2:
+          type: ["number", "null"]
+        isCritical:
+          type: boolean
+        isDismissed:
+          type: boolean
+        loggedAt:
+          type: string
+        notes:
+          type: ["string", "null"]
+      required:
+        - id
+        - patientId
+        - isCritical
+        - isDismissed
+        - loggedAt
+
+    AddVitalLogBody:
+      type: object
+      properties:
+        heartRate:
+          type: ["integer", "null"]
+        respirationRate:
+          type: ["integer", "null"]
+        systolicBp:
+          type: ["integer", "null"]
+        diastolicBp:
+          type: ["integer", "null"]
+        spo2:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+
+    CriticalVital:
+      type: object
+      properties:
+        logId:
+          type: integer
+        patientId:
+          type: string
+        patientName:
+          type: string
+        heartRate:
+          type: ["integer", "null"]
+        respirationRate:
+          type: ["integer", "null"]
+        systolicBp:
+          type: ["integer", "null"]
+        diastolicBp:
+          type: ["integer", "null"]
+        spo2:
+          type: ["number", "null"]
+        isDismissed:
+          type: boolean
+        loggedAt:
+          type: string
+      required:
+        - logId
+        - patientId
+        - patientName
+        - isDismissed
+        - loggedAt
+
+    Medication:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: string
+        doctorId:
+          type: string
+        doctorName:
+          type: string
+        medicationName:
+          type: string
+        dosage:
+          type: ["string", "null"]
+        frequency:
+          type: ["string", "null"]
+        timeToTake:
+          type: ["string", "null"]
+        conditionInfo:
+          type: ["string", "null"]
+        additionalInfo:
+          type: ["string", "null"]
+        isCurrent:
+          type: boolean
+        prescribedAt:
+          type: string
+      required:
+        - id
+        - patientId
+        - doctorId
+        - doctorName
+        - medicationName
+        - isCurrent
+        - prescribedAt
+
+    MedicationList:
+      type: object
+      properties:
+        current:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+        past:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+      required:
+        - current
+        - past
+
+    AddMedicationBody:
+      type: object
+      properties:
+        patientId:
+          type: string
+        medicationName:
+          type: string
+        dosage:
+          type: ["string", "null"]
+        frequency:
+          type: ["string", "null"]
+        timeToTake:
+          type: ["string", "null"]
+        conditionInfo:
+          type: ["string", "null"]
+        additionalInfo:
+          type: ["string", "null"]
+      required:
+        - patientId
+        - medicationName
+
+    UpdateMedicationBody:
+      type: object
+      properties:
+        isCurrent:
+          type: boolean
+        dosage:
+          type: ["string", "null"]
+        frequency:
+          type: ["string", "null"]
+        timeToTake:
+          type: ["string", "null"]
+        conditionInfo:
+          type: ["string", "null"]
+        additionalInfo:
+          type: ["string", "null"]
+
+    PatientDashboardSummary:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/UserProfile"
+        doctor:
+          $ref: "#/components/schemas/DoctorProfile"
+        upcomingAppointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        topConversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Conversation"
+        latestVitals:
+          $ref: "#/components/schemas/VitalLog"
+        upcomingMedications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+      required:
+        - profile
+        - upcomingAppointments
+        - topConversations
+        - upcomingMedications
+
+    DoctorDashboardSummary:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/UserProfile"
+        upcomingAppointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        topConversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Conversation"
+        criticalVitals:
+          type: array
+          items:
+            $ref: "#/components/schemas/CriticalVital"
+        recentMedications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+        pendingRequests:
+          type: integer
+      required:
+        - profile
+        - upcomingAppointments
+        - topConversations
+        - criticalVitals
+        - recentMedications
+        - pendingRequests
