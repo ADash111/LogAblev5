@@ -7,7 +7,6 @@ import { ArrowLeft, Calendar as CalendarIcon, Clock, Plus, Bell } from "lucide-r
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,7 +29,7 @@ export default function AppointmentsPage() {
             </Link>
             <h1 className="text-xl font-bold">Appointments</h1>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {profile?.role === "patient" ? (
               <RequestAppointmentDialog />
@@ -48,10 +47,10 @@ export default function AppointmentsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
             <Card className="shadow-sm">
-              <CardContent className="p-4 flex justify-center">
-                <Calendar 
+              <CardContent className="p-2">
+                <Calendar
                   mode="single"
-                  className="rounded-md border-0"
+                  className="w-full [&>div]:w-full [&_table]:w-full [&_td]:p-1 [&_th]:p-1"
                 />
               </CardContent>
             </Card>
@@ -134,12 +133,17 @@ function RequestAppointmentDialog() {
       onSuccess: () => {
         toast({ title: "Appointment requested", description: "Waiting for doctor's approval." });
         setOpen(false);
+        setDate(undefined);
+        setTime("");
         queryClient.invalidateQueries({ queryKey: getGetMyAppointmentsQueryKey() });
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Could not request appointment. Make sure you have an assigned doctor.", variant: "destructive" });
       }
     }
   });
 
-  const availableTimesForDate = date 
+  const availableTimesForDate = date
     ? slots?.filter(s => s.slotDate === format(date, 'yyyy-MM-dd') && s.isAvailable).map(s => s.slotTime)
     : [];
 
@@ -150,30 +154,31 @@ function RequestAppointmentDialog() {
           <Plus className="h-4 w-4 mr-2" /> Request
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Request Appointment</DialogTitle>
           <DialogDescription>Pick a date to see available time slots.</DialogDescription>
         </DialogHeader>
-        <div className="py-4 grid gap-6">
-          <div className="flex justify-center border border-border rounded-xl p-4 bg-secondary/20">
-            <Calendar 
+        <div className="py-2 grid gap-5">
+          <div className="border border-border rounded-xl p-2 bg-secondary/20">
+            <Calendar
               mode="single"
               selected={date}
               onSelect={(d) => { setDate(d); setTime(""); }}
               disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+              className="w-full [&>div]:w-full [&_table]:w-full [&_td]:p-1 [&_th]:p-1"
             />
           </div>
-          
+
           {date && (
             <div className="space-y-3 animate-in fade-in">
               <label className="text-sm font-medium">Available Times</label>
               <div className="grid grid-cols-3 gap-2">
                 {availableTimesForDate?.length ? (
                   availableTimesForDate.map(t => (
-                    <Button 
-                      key={t} 
-                      variant={time === t ? "default" : "outline"} 
+                    <Button
+                      key={t}
+                      variant={time === t ? "default" : "outline"}
                       onClick={() => setTime(t)}
                     >
                       {t}
@@ -188,13 +193,13 @@ function RequestAppointmentDialog() {
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             disabled={!date || !time || requestAppointment.isPending}
-            onClick={() => requestAppointment.mutate({ 
-              data: { 
+            onClick={() => requestAppointment.mutate({
+              data: {
                 requestedDate: format(date!, 'yyyy-MM-dd'),
                 requestedTime: time
-              } 
+              }
             })}
           >
             {requestAppointment.isPending ? "Requesting..." : "Send Request"}
@@ -215,17 +220,25 @@ function AddSlotDialog() {
   const addSlot = useAddAppointmentSlot({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Slot added" });
+        toast({ title: "Slot added", description: `${date ? format(date, 'MMM d') : ''} at ${formatTime(time)} is now available.` });
         setOpen(false);
         setTime("");
         setDate(undefined);
         queryClient.invalidateQueries({ queryKey: getGetAvailableSlotsQueryKey() });
       },
       onError: () => {
-        toast({ title: "Error", description: "Failed to add slot or duplicate slot.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to add slot — it may already exist.", variant: "destructive" });
       }
     }
   });
+
+  const formatTime = (t: string) => {
+    if (!t) return "";
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hour = h % 12 || 12;
+    return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -234,32 +247,43 @@ function AddSlotDialog() {
           <Plus className="h-4 w-4 mr-2" /> Add Slot
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add Availability</DialogTitle>
+          <DialogDescription>Choose a date and time to open for patient bookings.</DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-4">
-          <div className="flex justify-center border border-border rounded-xl p-4 bg-secondary/20">
-            <Calendar 
+        <div className="py-2 space-y-4">
+          <div className="border border-border rounded-xl p-2 bg-secondary/20">
+            <Calendar
               mode="single"
               selected={date}
               onSelect={setDate}
+              disabled={(d) => d < new Date(new Date().setHours(0,0,0,0))}
+              className="w-full [&>div]:w-full [&_table]:w-full [&_td]:p-1 [&_th]:p-1"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Time (e.g. 09:00 AM)</label>
-            <Input value={time} onChange={e => setTime(e.target.value)} placeholder="10:30 AM" />
+            <label className="text-sm font-medium">Time</label>
+            <input
+              type="time"
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+            {time && (
+              <p className="text-xs text-muted-foreground">Will be saved as: {formatTime(time)}</p>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             disabled={!date || !time || addSlot.isPending}
-            onClick={() => addSlot.mutate({ 
-              data: { slotDate: format(date!, 'yyyy-MM-dd'), slotTime: time } 
+            onClick={() => addSlot.mutate({
+              data: { slotDate: format(date!, 'yyyy-MM-dd'), slotTime: formatTime(time) }
             })}
           >
-            Add Slot
+            {addSlot.isPending ? "Saving..." : "Add Slot"}
           </Button>
         </div>
       </DialogContent>
@@ -311,17 +335,17 @@ function PendingRequestsSheet() {
                     <p className="text-sm text-muted-foreground">{new Date(req.requestedDate).toLocaleDateString()} at {req.requestedTime}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleRespond(req.id, 'accepted')}
                       disabled={respond.isPending}
                     >
                       Accept
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
+                    <Button
+                      size="sm"
+                      variant="destructive"
                       className="flex-1"
                       onClick={() => handleRespond(req.id, 'declined')}
                       disabled={respond.isPending}

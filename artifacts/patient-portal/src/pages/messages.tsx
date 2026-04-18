@@ -14,10 +14,14 @@ export default function MessagesPage() {
   const { data: profile } = useGetMyProfile();
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [selectedContactName, setSelectedContactName] = useState<string>("");
 
   if (isLoading) return <div className="p-8 text-center">Loading messages...</div>;
 
-  const selectedConv = conversations?.find(c => c.contactId === selectedContactId);
+  const handleSelectContact = (contactId: string, contactName: string) => {
+    setSelectedContactId(contactId);
+    setSelectedContactName(contactName);
+  };
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col md:flex-row">
@@ -32,9 +36,11 @@ export default function MessagesPage() {
             </Link>
             <h1 className="text-xl font-bold">Messages</h1>
           </div>
-          {profile?.role === "doctor" && <NewConversationDialog onSelect={setSelectedContactId} />}
+          {profile?.role === "doctor" && (
+            <NewConversationDialog onSelect={(id, name) => handleSelectContact(id, name)} />
+          )}
         </div>
-        
+
         <div className="flex-1 overflow-y-auto">
           {conversations?.length === 0 ? (
             <p className="text-center text-muted-foreground p-8">No conversations yet.</p>
@@ -43,7 +49,7 @@ export default function MessagesPage() {
               {conversations?.map((conv) => (
                 <button
                   key={conv.contactId}
-                  onClick={() => setSelectedContactId(conv.contactId)}
+                  onClick={() => handleSelectContact(conv.contactId, conv.contactName)}
                   className={`w-full text-left p-4 hover:bg-secondary/50 transition-colors ${selectedContactId === conv.contactId ? 'bg-secondary' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-1">
@@ -73,8 +79,12 @@ export default function MessagesPage() {
 
       {/* Right Area - Message Thread */}
       <div className={`flex-1 h-[100dvh] flex-col bg-background/50 ${selectedContactId ? 'flex' : 'hidden md:flex'}`}>
-        {selectedContactId && selectedConv ? (
-          <MessageThread contactId={selectedContactId} contactName={selectedConv.contactName} onBack={() => setSelectedContactId(null)} />
+        {selectedContactId ? (
+          <MessageThread
+            contactId={selectedContactId}
+            contactName={selectedContactName}
+            onBack={() => setSelectedContactId(null)}
+          />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             Select a conversation to start messaging
@@ -85,14 +95,15 @@ export default function MessagesPage() {
   );
 }
 
-function NewConversationDialog({ onSelect }: { onSelect: (id: string) => void }) {
+function NewConversationDialog({ onSelect }: { onSelect: (id: string, name: string) => void }) {
   const [open, setOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const { data: patients } = useGetMyPatients();
 
   const handleStart = () => {
     if (selectedPatientId) {
-      onSelect(selectedPatientId);
+      const patient = patients?.find(p => p.clerkId === selectedPatientId);
+      onSelect(selectedPatientId, patient?.name ?? "Patient");
       setOpen(false);
     }
   };
@@ -142,7 +153,6 @@ function MessageThread({ contactId, contactName, onBack }: { contactId: string, 
       onSuccess: () => {
         setContent("");
         queryClient.invalidateQueries({ queryKey: getGetMessagesQueryKey(contactId) });
-        // Also invalidate conversations to update last message
         queryClient.invalidateQueries({ queryKey: ['/api/messages/conversations'] });
       }
     }
@@ -201,8 +211,8 @@ function MessageThread({ contactId, contactName, onBack }: { contactId: string, 
 
       <div className="p-4 bg-card border-t border-border">
         <form onSubmit={handleSend} className="flex gap-2">
-          <Input 
-            value={content} 
+          <Input
+            value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Type your message..."
             className="flex-1 rounded-full bg-secondary/50 border-transparent focus-visible:ring-primary focus-visible:border-transparent"
