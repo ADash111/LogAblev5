@@ -10,7 +10,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-primary">
             <Activity className="h-6 w-6" />
-            <span className="font-semibold text-lg tracking-tight">MediConnect</span>
+            <span className="font-semibold text-lg tracking-tight">LogAble</span>
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/sign-in" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -101,9 +101,9 @@ export default function HomePage() {
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            <span className="font-semibold">MediConnect</span>
+            <span className="font-semibold">LogAble</span>
           </div>
-          <p>© {new Date().getFullYear()} MediConnect. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} LogAble. All rights reserved.</p>
         </div>
       </footer>
     </div>

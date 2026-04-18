@@ -141,13 +141,13 @@ function ClerkProviderWithRoutes() {
       localization={{
         signIn: {
           start: {
-            title: "Welcome to MediConnect",
+            title: "Welcome to LogAble",
             subtitle: "Sign in to access your portal",
           },
         },
         signUp: {
           start: {
-            title: "Join MediConnect",
+            title: "Join LogAble",
             subtitle: "Create your secure account",
           },
         },

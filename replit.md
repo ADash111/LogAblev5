@@ -1,4 +1,4 @@
-# MediConnect - Patient & Doctor Portal
+# LogAble - Patient & Doctor Portal
 
 ## Overview
 

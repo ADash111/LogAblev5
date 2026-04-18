@@ -46,7 +46,7 @@ export default function OnboardingPage() {
   const completeOnboarding = useCompleteOnboarding({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Profile setup complete", description: "Welcome to MediConnect." });
+        toast({ title: "Profile setup complete", description: "Welcome to LogAble." });
         setLocation("/dashboard");
       },
       onError: (err) => {
