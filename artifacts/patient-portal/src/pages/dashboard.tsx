@@ -1,7 +1,7 @@
 import { useGetMyProfile, useGetPatientDashboardSummary, useGetDoctorDashboardSummary, useAddPatient, useGetDoctors } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MessageSquare, Activity, Pill, Plus, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
+import { Calendar, MessageSquare, Activity, Pill, Plus, ArrowRight, UserPlus, CheckCircle2, Copy, Check } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,25 +31,28 @@ export default function DashboardPage() {
             </div>
             
             {profile.role === "patient" && (
-              <div className="flex flex-wrap gap-4 text-sm bg-secondary/50 p-4 rounded-xl">
-                <div>
-                  <p className="text-muted-foreground font-medium">Date of Birth</p>
-                  <p>{profile.dateOfBirth || "N/A"}</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-4 text-sm bg-secondary/50 p-4 rounded-xl">
+                  <div>
+                    <p className="text-muted-foreground font-medium">Date of Birth</p>
+                    <p>{profile.dateOfBirth || "N/A"}</p>
+                  </div>
+                  <div className="w-px bg-border/50" />
+                  <div>
+                    <p className="text-muted-foreground font-medium">Height/Weight</p>
+                    <p>{profile.heightCm ? `${profile.heightCm}cm` : "N/A"} / {profile.weightKg ? `${profile.weightKg}kg` : "N/A"}</p>
+                  </div>
+                  {profile.conditions && (
+                    <>
+                      <div className="w-px bg-border/50" />
+                      <div>
+                        <p className="text-muted-foreground font-medium">Conditions</p>
+                        <p className="max-w-[200px] truncate" title={profile.conditions}>{profile.conditions}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="w-px bg-border/50" />
-                <div>
-                  <p className="text-muted-foreground font-medium">Height/Weight</p>
-                  <p>{profile.heightCm ? `${profile.heightCm}cm` : "N/A"} / {profile.weightKg ? `${profile.weightKg}kg` : "N/A"}</p>
-                </div>
-                {profile.conditions && (
-                  <>
-                    <div className="w-px bg-border/50" />
-                    <div>
-                      <p className="text-muted-foreground font-medium">Conditions</p>
-                      <p className="max-w-[200px] truncate" title={profile.conditions}>{profile.conditions}</p>
-                    </div>
-                  </>
-                )}
+                <PatientIdCard clerkId={profile.clerkId} />
               </div>
             )}
 
@@ -124,6 +127,36 @@ function AddPatientDialog() {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PatientIdCard({ clerkId }: { clerkId: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(clerkId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-0.5">Your Patient ID</p>
+        <p className="text-xs text-muted-foreground mb-1">Share this with your doctor so they can add you to their roster.</p>
+        <p className="font-mono text-sm font-medium truncate">{clerkId}</p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleCopy}
+        className="shrink-0 gap-1.5 rounded-lg border-primary/30 text-primary hover:bg-primary/10"
+      >
+        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? "Copied!" : "Copy"}
+      </Button>
+    </div>
   );
 }
 
