@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Activity, Loader2, User, Stethoscope } from "lucide-react";
+import { Activity, Loader2, User, Stethoscope, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  role: z.enum(["patient", "doctor"], {
+  role: z.enum(["patient", "doctor", "admin"], {
     required_error: "Please select a role.",
   }),
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -70,6 +70,9 @@ export default function OnboardingPage() {
     });
   }
 
+  const showPatientFields = selectedRole === "patient";
+  const showDoctorFields = selectedRole === "doctor";
+
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 py-12">
       <div className="w-full max-w-xl">
@@ -98,7 +101,7 @@ export default function OnboardingPage() {
                         <RadioGroup
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          className="grid grid-cols-2 gap-4"
+                          className="grid grid-cols-3 gap-4"
                         >
                           <FormItem>
                             <FormControl>
@@ -118,6 +121,17 @@ export default function OnboardingPage() {
                                 <Label htmlFor="role-doctor" className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-transparent p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer">
                                   <Stethoscope className="mb-3 h-6 w-6 text-primary" />
                                   <span className="font-semibold">Doctor</span>
+                                </Label>
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                          <FormItem>
+                            <FormControl>
+                              <div className="relative">
+                                <RadioGroupItem value="admin" className="peer sr-only" id="role-admin" />
+                                <Label htmlFor="role-admin" className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-transparent p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer">
+                                  <ShieldCheck className="mb-3 h-6 w-6 text-primary" />
+                                  <span className="font-semibold">Admin</span>
                                 </Label>
                               </div>
                             </FormControl>

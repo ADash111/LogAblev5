@@ -206,13 +206,13 @@ router.get("/users/my-patients", requireAuth, async (req, res): Promise<void> =>
   })));
 });
 
-// Add patient (doctor only)
+// Add patient (admin only)
 router.post("/users/add-patient", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
 
   const [doctor] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
-  if (!doctor || doctor.role !== "doctor") {
-    res.status(403).json({ error: "Forbidden - not a doctor" });
+  if (!doctor || doctor.role !== "admin") {
+    res.status(403).json({ error: "Forbidden - admin only" });
     return;
   }
 

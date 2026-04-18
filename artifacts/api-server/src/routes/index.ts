@@ -6,6 +6,7 @@ import appointmentsRouter from "./appointments";
 import vitalsRouter from "./vitals";
 import medicationsRouter from "./medications";
 import dashboardRouter from "./dashboard";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(appointmentsRouter);
 router.use(vitalsRouter);
 router.use(medicationsRouter);
 router.use(dashboardRouter);
+router.use(adminRouter);
 
 export default router;

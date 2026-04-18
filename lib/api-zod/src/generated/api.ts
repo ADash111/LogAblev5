@@ -69,7 +69,7 @@ export const UpdateMyProfileResponse = zod.object({
  * @summary Complete user onboarding (set role)
  */
 export const CompleteOnboardingBody = zod.object({
-  role: zod.enum(["patient", "doctor"]),
+  role: zod.enum(["patient", "doctor", "admin"]),
   name: zod.string(),
   dateOfBirth: zod.string().nullish(),
   heightCm: zod.number().nullish(),
