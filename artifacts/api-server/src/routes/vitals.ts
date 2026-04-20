@@ -6,7 +6,12 @@ import { AddVitalLogBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-// Normal ranges for vital interpretation
+// Normal ranges:
+//   Heart rate: 60–100 bpm
+//   Respiration: 12–20 br/min
+//   SpO2: 95–100%
+//   Blood pressure: systolic 90–120, diastolic 60–80
+
 function isVitalCritical(
   heartRate?: number | null,
   respirationRate?: number | null,
@@ -21,13 +26,38 @@ function isVitalCritical(
     if (respirationRate < 8 || respirationRate > 30) return true;
   }
   if (systolicBp !== undefined && systolicBp !== null) {
-    if (systolicBp < 90 || systolicBp > 180) return true;
+    if (systolicBp < 80 || systolicBp > 180) return true;
   }
   if (diastolicBp !== undefined && diastolicBp !== null) {
-    if (diastolicBp < 60 || diastolicBp > 120) return true;
+    if (diastolicBp < 50 || diastolicBp > 120) return true;
   }
   if (spo2 !== undefined && spo2 !== null) {
-    if (spo2 < 92) return true;
+    if (spo2 < 90) return true;
+  }
+  return false;
+}
+
+function isVitalAbnormal(
+  heartRate?: number | null,
+  respirationRate?: number | null,
+  systolicBp?: number | null,
+  diastolicBp?: number | null,
+  spo2?: number | null
+): boolean {
+  if (heartRate !== undefined && heartRate !== null) {
+    if (heartRate < 60 || heartRate > 100) return true;
+  }
+  if (respirationRate !== undefined && respirationRate !== null) {
+    if (respirationRate < 12 || respirationRate > 20) return true;
+  }
+  if (systolicBp !== undefined && systolicBp !== null) {
+    if (systolicBp < 90 || systolicBp > 120) return true;
+  }
+  if (diastolicBp !== undefined && diastolicBp !== null) {
+    if (diastolicBp < 60 || diastolicBp > 80) return true;
+  }
+  if (spo2 !== undefined && spo2 !== null) {
+    if (spo2 < 95) return true;
   }
   return false;
 }
@@ -136,6 +166,56 @@ router.get("/vitals/critical", requireAuth, async (req, res): Promise<void> => {
   const patientMap = new Map(allPatients.map(p => [p.clerkId, p]));
 
   res.json(myPatientCriticals.map(v => ({
+    logId: v.id,
+    patientId: v.patientClerkId,
+    patientName: patientMap.get(v.patientClerkId)?.name || "Unknown",
+    heartRate: v.heartRate,
+    respirationRate: v.respirationRate,
+    systolicBp: v.systolicBp,
+    diastolicBp: v.diastolicBp,
+    spo2: v.spo2,
+    isDismissed: v.isDismissed,
+    loggedAt: v.loggedAt.toISOString(),
+  })));
+});
+
+// Get abnormal (but not critical) vitals (doctor only)
+router.get("/vitals/abnormal", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
+  if (!user || user.role !== "doctor") {
+    res.status(403).json({ error: "Forbidden - not a doctor" });
+    return;
+  }
+
+  const relationships = await db
+    .select()
+    .from(doctorPatientsTable)
+    .where(eq(doctorPatientsTable.doctorClerkId, userId));
+
+  const patientIds = relationships.map(r => r.patientClerkId);
+
+  if (patientIds.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const allVitals = await db
+    .select()
+    .from(vitalLogsTable)
+    .orderBy(desc(vitalLogsTable.loggedAt));
+
+  const myPatientAbnormals = allVitals.filter(v =>
+    patientIds.includes(v.patientClerkId) &&
+    !v.isCritical &&
+    isVitalAbnormal(v.heartRate, v.respirationRate, v.systolicBp, v.diastolicBp, v.spo2)
+  );
+
+  const allPatients = await db.select().from(usersTable);
+  const patientMap = new Map(allPatients.map(p => [p.clerkId, p]));
+
+  res.json(myPatientAbnormals.map(v => ({
     logId: v.id,
     patientId: v.patientClerkId,
     patientName: patientMap.get(v.patientClerkId)?.name || "Unknown",

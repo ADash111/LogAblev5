@@ -395,6 +395,23 @@ paths:
         "403":
           description: Forbidden - not a doctor
 
+  /vitals/abnormal:
+    get:
+      operationId: getAbnormalVitals
+      tags: [vitals]
+      summary: Get abnormal (but not critical) vitals for all of the doctor's patients
+      responses:
+        "200":
+          description: List of abnormal vital alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CriticalVital"
+        "403":
+          description: Forbidden - not a doctor
+
   /vitals/critical/{id}/dismiss:
     post:
       operationId: dismissCriticalVital

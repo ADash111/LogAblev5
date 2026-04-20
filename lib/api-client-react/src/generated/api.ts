@@ -1658,6 +1658,77 @@ export function useGetCriticalVitals<
 }
 
 /**
+ * @summary Get abnormal (but not critical) vitals for all of the doctor's patients
+ */
+export const getGetAbnormalVitalsUrl = () => {
+  return `/api/vitals/abnormal`;
+};
+
+export const getAbnormalVitals = async (
+  options?: RequestInit,
+): Promise<CriticalVital[]> => {
+  return customFetch<CriticalVital[]>(getGetAbnormalVitalsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAbnormalVitalsQueryKey = () => {
+  return [`/api/vitals/abnormal`] as const;
+};
+
+export const getGetAbnormalVitalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAbnormalVitals>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAbnormalVitals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAbnormalVitalsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAbnormalVitals>>
+  > = ({ signal }) => getAbnormalVitals({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAbnormalVitals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAbnormalVitalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAbnormalVitals>>
+>;
+export type GetAbnormalVitalsQueryError = ErrorType<void>;
+
+export function useGetAbnormalVitals<
+  TData = Awaited<ReturnType<typeof getAbnormalVitals>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAbnormalVitals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAbnormalVitalsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Doctor dismisses/crosses out a critical vital
  */
 export const getDismissCriticalVitalUrl = (id: number) => {
