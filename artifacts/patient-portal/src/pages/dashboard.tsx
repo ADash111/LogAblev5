@@ -1,4 +1,4 @@
-import { useGetMyProfile, useGetPatientDashboardSummary, useGetDoctorDashboardSummary } from "@workspace/api-client-react";
+import { useGetMyProfile, useGetPatientDashboardSummary, useGetDoctorDashboardSummary, useGetAbnormalVitals } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MessageSquare, Activity, Pill, ArrowRight, CheckCircle2, Copy, Check, ShieldCheck, UserRound, Stethoscope, X, Users } from "lucide-react";
@@ -233,6 +233,7 @@ function PatientDashboard() {
 
 function DoctorDashboard() {
   const { data: summary, isLoading } = useGetDoctorDashboardSummary();
+  const { data: abnormalVitals } = useGetAbnormalVitals();
 
   if (isLoading) return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
@@ -304,6 +305,35 @@ function DoctorDashboard() {
           <div className="py-8 text-center flex flex-col items-center text-muted-foreground">
             <CheckCircle2 className="h-8 w-8 mb-2 text-green-500/70" />
             <p className="text-sm">No critical vitals at this time.</p>
+          </div>
+        )}
+      </FeatureCard>
+
+      <FeatureCard href="/vitals" icon={Activity} title="Abnormal Readings">
+        {abnormalVitals && abnormalVitals.length > 0 ? (
+          <div className="space-y-3 mt-2">
+            {abnormalVitals.slice(0,3).map((vital, i) => (
+              <div key={i} className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/40">
+                <div className="flex justify-between items-start mb-1">
+                  <p className="font-medium text-sm">{vital.patientName}</p>
+                  <span className="text-[10px] text-muted-foreground">{new Date(vital.loggedAt).toLocaleDateString()}</span>
+                </div>
+                <div className="text-xs text-amber-800 dark:text-amber-300 flex flex-wrap gap-3">
+                  {vital.heartRate != null && <span>HR: {vital.heartRate}</span>}
+                  {vital.respirationRate != null && <span>RR: {vital.respirationRate}</span>}
+                  {vital.systolicBp != null && <span>BP: {vital.systolicBp}/{vital.diastolicBp}</span>}
+                  {vital.spo2 != null && <span>SpO2: {vital.spo2}%</span>}
+                </div>
+              </div>
+            ))}
+            {abnormalVitals.length > 3 && (
+              <p className="text-xs text-muted-foreground text-center pt-1">+{abnormalVitals.length - 3} more</p>
+            )}
+          </div>
+        ) : (
+          <div className="py-8 text-center flex flex-col items-center text-muted-foreground">
+            <CheckCircle2 className="h-8 w-8 mb-2 text-green-500/70" />
+            <p className="text-sm">No abnormal readings.</p>
           </div>
         )}
       </FeatureCard>
