@@ -9,7 +9,13 @@ export default function SignUpPage() {
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
       <div className="relative z-10 w-full max-w-[400px]">
-        <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+          forceRedirectUrl={`${basePath}/onboarding`}
+          fallbackRedirectUrl={`${basePath}/onboarding`}
+        />
       </div>
     </div>
   );

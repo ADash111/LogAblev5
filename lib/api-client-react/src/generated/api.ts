@@ -1334,6 +1334,90 @@ export function useGetAppointmentRequests<
 }
 
 /**
+ * @summary Patient or doctor cancels an appointment (pending or accepted)
+ */
+export const getCancelAppointmentUrl = (id: number) => {
+  return `/api/appointments/${id}`;
+};
+
+export const cancelAppointment = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getCancelAppointmentUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getCancelAppointmentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelAppointment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelAppointment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["cancelAppointment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelAppointment>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelAppointment(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelAppointmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelAppointment>>
+>;
+
+export type CancelAppointmentMutationError = ErrorType<void>;
+
+/**
+ * @summary Patient or doctor cancels an appointment (pending or accepted)
+ */
+export const useCancelAppointment = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelAppointment>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelAppointment>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCancelAppointmentMutationOptions(options));
+};
+
+/**
  * @summary Doctor accepts or declines an appointment request
  */
 export const getRespondToAppointmentUrl = (id: number) => {
@@ -1707,6 +1791,10 @@ export type GetAbnormalVitalsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getAbnormalVitals>>
 >;
 export type GetAbnormalVitalsQueryError = ErrorType<void>;
+
+/**
+ * @summary Get abnormal (but not critical) vitals for all of the doctor's patients
+ */
 
 export function useGetAbnormalVitals<
   TData = Awaited<ReturnType<typeof getAbnormalVitals>>,

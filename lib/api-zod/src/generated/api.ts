@@ -69,7 +69,7 @@ export const UpdateMyProfileResponse = zod.object({
  * @summary Complete user onboarding (set role)
  */
 export const CompleteOnboardingBody = zod.object({
-  role: zod.enum(["patient", "doctor", "admin"]),
+  role: zod.enum(["patient", "doctor"]),
   name: zod.string(),
   dateOfBirth: zod.string().nullish(),
   heightCm: zod.number().nullish(),
@@ -257,6 +257,13 @@ export const GetAppointmentRequestsResponse = zod.array(
 );
 
 /**
+ * @summary Patient or doctor cancels an appointment (pending or accepted)
+ */
+export const CancelAppointmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Doctor accepts or declines an appointment request
  */
 export const RespondToAppointmentParams = zod.object({
@@ -328,6 +335,25 @@ export const GetCriticalVitalsResponseItem = zod.object({
 });
 export const GetCriticalVitalsResponse = zod.array(
   GetCriticalVitalsResponseItem,
+);
+
+/**
+ * @summary Get abnormal (but not critical) vitals for all of the doctor's patients
+ */
+export const GetAbnormalVitalsResponseItem = zod.object({
+  logId: zod.number(),
+  patientId: zod.string(),
+  patientName: zod.string(),
+  heartRate: zod.number().nullish(),
+  respirationRate: zod.number().nullish(),
+  systolicBp: zod.number().nullish(),
+  diastolicBp: zod.number().nullish(),
+  spo2: zod.number().nullish(),
+  isDismissed: zod.boolean(),
+  loggedAt: zod.string(),
+});
+export const GetAbnormalVitalsResponse = zod.array(
+  GetAbnormalVitalsResponseItem,
 );
 
 /**

@@ -1,9 +1,9 @@
-import { useGetMyAppointments, useGetAvailableSlots, useRequestAppointment, useAddAppointmentSlot, useGetAppointmentRequests, useRespondToAppointment, useGetMyProfile, getGetAppointmentRequestsQueryKey, getGetMyAppointmentsQueryKey, getGetAvailableSlotsQueryKey } from "@workspace/api-client-react";
+import { useGetMyAppointments, useGetAvailableSlots, useRequestAppointment, useAddAppointmentSlot, useGetAppointmentRequests, useRespondToAppointment, useCancelAppointment, useGetMyProfile, getGetAppointmentRequestsQueryKey, getGetMyAppointmentsQueryKey, getGetAvailableSlotsQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Plus, Bell } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Plus, Bell, X } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -66,8 +66,28 @@ export default function AppointmentsPage() {
   );
 }
 
+// Parse a 'YYYY-MM-DD' string as a local date (avoids UTC midnight → previous-day shift).
+function parseLocalDate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
 function AppointmentList({ role }: { role?: string | null }) {
   const { data: appointments, isLoading } = useGetMyAppointments();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const cancel = useCancelAppointment({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Appointment cancelled" });
+        queryClient.invalidateQueries({ queryKey: getGetMyAppointmentsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAppointmentRequestsQueryKey() });
+      },
+      onError: () => {
+        toast({ title: "Could not cancel appointment", variant: "destructive" });
+      },
+    },
+  });
 
   if (isLoading) return <div className="animate-pulse space-y-4">
     {[1,2,3].map(i => <div key={i} className="h-24 bg-muted rounded-xl" />)}
@@ -84,38 +104,63 @@ function AppointmentList({ role }: { role?: string | null }) {
     );
   }
 
+  const handleCancel = (id: number, status: string) => {
+    const verb = status === "pending" ? "Cancel this pending request?" : "Cancel this scheduled appointment?";
+    if (!window.confirm(verb)) return;
+    cancel.mutate({ id });
+  };
+
   return (
     <div className="space-y-4">
-      {appointments.map((apt) => (
-        <Card key={apt.id} className="hover-elevate overflow-hidden">
-          <div className="flex flex-col sm:flex-row">
-            <div className="bg-secondary/50 p-4 flex flex-col justify-center items-center sm:w-32 border-b sm:border-b-0 sm:border-r border-border/50">
-              <span className="text-sm font-semibold text-primary uppercase tracking-wider">{format(new Date(apt.requestedDate), 'MMM')}</span>
-              <span className="text-3xl font-bold">{format(new Date(apt.requestedDate), 'dd')}</span>
-            </div>
-            <div className="p-4 sm:p-6 flex-1 flex flex-col justify-center">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-semibold text-lg">{role === 'patient' ? apt.doctorName : apt.patientName}</h3>
-                  <div className="flex items-center text-muted-foreground mt-1">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span>{apt.requestedTime}</span>
+      {appointments.map((apt) => {
+        const dt = parseLocalDate(apt.requestedDate);
+        const canCancel = apt.status === "pending" || apt.status === "accepted";
+        return (
+          <Card key={apt.id} className="hover-elevate overflow-hidden">
+            <div className="flex flex-col sm:flex-row">
+              <div className="bg-secondary/50 p-4 flex flex-col justify-center items-center sm:w-32 border-b sm:border-b-0 sm:border-r border-border/50">
+                <span className="text-sm font-semibold text-primary uppercase tracking-wider">{format(dt, 'MMM')}</span>
+                <span className="text-3xl font-bold">{format(dt, 'dd')}</span>
+              </div>
+              <div className="p-4 sm:p-6 flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-start mb-2 gap-3">
+                  <div>
+                    <h3 className="font-semibold text-lg">{role === 'patient' ? apt.doctorName : apt.patientName}</h3>
+                    <div className="flex items-center text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4 mr-1" />
+                      <span>{apt.requestedTime}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={apt.status === "accepted" ? "default" : apt.status === "pending" ? "secondary" : "destructive"}>
+                      {apt.status}
+                    </Badge>
+                    {canCancel && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                        onClick={() => handleCancel(apt.id, apt.status)}
+                        disabled={cancel.isPending}
+                        aria-label="Cancel appointment"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <Badge variant={apt.status === "accepted" ? "default" : apt.status === "pending" ? "secondary" : "destructive"}>
-                  {apt.status}
-                </Badge>
+                {apt.doctorNote && (
+                  <div className="mt-3 text-sm bg-muted/50 p-3 rounded-lg border border-border/50">
+                    <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-1">Note from Doctor</span>
+                    {apt.doctorNote}
+                  </div>
+                )}
               </div>
-              {apt.doctorNote && (
-                <div className="mt-3 text-sm bg-muted/50 p-3 rounded-lg border border-border/50">
-                  <span className="font-medium text-xs uppercase tracking-wider text-muted-foreground block mb-1">Note from Doctor</span>
-                  {apt.doctorNote}
-                </div>
-              )}
             </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }

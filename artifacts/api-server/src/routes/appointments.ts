@@ -231,6 +231,36 @@ router.get("/appointments/requests", requireAuth, async (req, res): Promise<void
   })));
 });
 
+// Cancel an appointment (patient or doctor — for pending or accepted)
+router.delete("/appointments/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [appt] = await db
+    .select()
+    .from(appointmentsTable)
+    .where(eq(appointmentsTable.id, id));
+
+  if (!appt) {
+    res.status(404).json({ error: "Appointment not found" });
+    return;
+  }
+
+  if (appt.patientClerkId !== userId && appt.doctorClerkId !== userId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  await db.delete(appointmentsTable).where(eq(appointmentsTable.id, id));
+  res.status(204).end();
+});
+
 // Respond to appointment request (doctor only)
 router.post("/appointments/:id/respond", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;

@@ -314,6 +314,25 @@ paths:
         "403":
           description: Forbidden - not a doctor
 
+  /appointments/{id}:
+    delete:
+      operationId: cancelAppointment
+      tags: [appointments]
+      summary: Patient or doctor cancels an appointment (pending or accepted)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Appointment cancelled
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /appointments/{id}/respond:
     post:
       operationId: respondToAppointment
