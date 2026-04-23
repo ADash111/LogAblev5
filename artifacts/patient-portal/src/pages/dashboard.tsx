@@ -1,13 +1,15 @@
 import { useGetMyProfile, useGetPatientDashboardSummary, useGetDoctorDashboardSummary, useGetAbnormalVitals } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MessageSquare, Activity, Pill, ArrowRight, CheckCircle2, Copy, Check, ShieldCheck, UserRound, Stethoscope, X, Users } from "lucide-react";
+import { Calendar, MessageSquare, Activity, Pill, ArrowRight, CheckCircle2, Copy, Check, ShieldCheck, UserRound, Stethoscope, X, Users, Camera, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useUser } from "@clerk/react";
 
 export default function DashboardPage() {
   const { data: profile, isLoading: profileLoading } = useGetMyProfile();
@@ -25,11 +27,10 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center shadow-sm">
-                {profile.role === "patient" && <UserRound className="h-6 w-6 text-primary" />}
-                {profile.role === "doctor" && <Stethoscope className="h-6 w-6 text-primary" />}
-                {profile.role === "admin" && <ShieldCheck className="h-6 w-6 text-primary" />}
-              </div>
+              <ProfileAvatar
+                name={profile.name}
+                role={profile.role}
+              />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">{profile.name}</h1>
                 <p className="text-sm text-primary font-medium capitalize">
@@ -542,3 +543,77 @@ function AdminDashboard() {
     </div>
   );
 }
+
+function ProfileAvatar({ name, role }: { name: string; role: string | null | undefined }) {
+  const { user } = useUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  const initials = name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "?";
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please choose an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Max 5 MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      await user.setProfileImage({ file });
+      await user.reload();
+      toast({ title: "Profile photo updated" });
+    } catch (err) {
+      toast({ title: "Could not update photo", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const RoleIcon = role === "doctor" ? Stethoscope : role === "admin" ? ShieldCheck : UserRound;
+
+  return (
+    <div className="relative group">
+      <Avatar className="h-14 w-14 border-2 border-primary/30 shadow-sm bg-primary/15">
+        {user?.imageUrl && <AvatarImage src={user.imageUrl} alt={name} />}
+        <AvatarFallback className="bg-primary/15 text-primary">
+          {user?.imageUrl ? (
+            initials
+          ) : (
+            <RoleIcon className="h-6 w-6" />
+          )}
+        </AvatarFallback>
+      </Avatar>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground border-2 border-background shadow flex items-center justify-center hover:bg-primary/90 disabled:opacity-50"
+        aria-label="Change profile photo"
+        title="Change profile photo"
+      >
+        <Camera className="h-3.5 w-3.5" />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+    </div>
+  );
+}
+

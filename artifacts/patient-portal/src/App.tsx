@@ -16,6 +16,7 @@ import MessagesPage from "@/pages/messages";
 import AppointmentsPage from "@/pages/appointments";
 import VitalsPage from "@/pages/vitals";
 import MedicationsPage from "@/pages/medications";
+import ResourcesPage from "@/pages/resources";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -180,6 +181,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/medications">
               <ProtectedRoute component={MedicationsPage} />
             </Route>
+            <Route path="/resources" component={ResourcesPage} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />

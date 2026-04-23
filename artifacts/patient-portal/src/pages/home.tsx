@@ -233,12 +233,15 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="py-8 text-center text-sm text-muted-foreground border-t border-border/40 bg-background">
-        <div className="container mx-auto px-4 flex items-center justify-between">
+      <footer className="py-8 text-sm text-muted-foreground border-t border-border/40 bg-background">
+        <div className="container mx-auto px-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-primary">
             <Activity className="h-4 w-4" />
             <span className="font-semibold">LogAble</span>
           </div>
+          <Link href="/resources" className="text-primary font-medium hover:underline">
+            Why LogAble Exists →
+          </Link>
           <p>© {new Date().getFullYear()} LogAble. All rights reserved.</p>
         </div>
       </footer>
