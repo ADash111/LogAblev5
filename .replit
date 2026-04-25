@@ -11,6 +11,27 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=24832 BASE_PATH=/ pnpm -r --parallel --filter '@workspace/api-server' --filter '@workspace/patient-portal' run dev"
+waitForPort = 24832
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -33,3 +54,8 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+VITE_CLERK_PUBLISHABLE_KEY = "pk_test_Y3V0ZS1hZGRlci01My5jbGVyay5hY2NvdW50cy5kZXYk"
