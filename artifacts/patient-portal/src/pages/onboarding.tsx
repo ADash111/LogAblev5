@@ -2,7 +2,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation } from "wouter";
-import { useCompleteOnboarding } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCompleteOnboarding, getGetMyProfileQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,8 @@ const formSchema = z.object({
 export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
+  const queryClient = useQueryClient();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -45,7 +47,16 @@ export default function OnboardingPage() {
 
   const completeOnboarding = useCompleteOnboarding({
     mutation: {
-      onSuccess: () => {
+      onSuccess: async (newProfile) => {
+        // Update the cached profile with the freshly-onboarded user so the
+        // dashboard's ProtectedRoute sees the new role and doesn't bounce
+        // back to the onboarding screen.
+        const profileKey = getGetMyProfileQueryKey();
+        if (newProfile) {
+          queryClient.setQueryData(profileKey, newProfile);
+        }
+        await queryClient.invalidateQueries({ queryKey: profileKey });
+
         toast({ title: "Profile setup complete", description: "Welcome to LogAble." });
         setLocation("/dashboard");
       },
