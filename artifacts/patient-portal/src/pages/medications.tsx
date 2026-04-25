@@ -1,9 +1,20 @@
-import { useGetMyMedications, useGetMyPatients, useGetPatientMedications, useAddMedication, useGetMyProfile, getGetMyMedicationsQueryKey, getGetPatientMedicationsQueryKey } from "@workspace/api-client-react";
+import { useGetMyMedications, useGetMyPatients, useGetPatientMedications, useAddMedication, useUpdateMedication, useGetMyProfile, getGetMyMedicationsQueryKey, getGetPatientMedicationsQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pill, Plus, Clock, Info } from "lucide-react";
+import { ArrowLeft, Pill, Plus, Clock, Info, Ban, History } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
@@ -157,6 +168,74 @@ function DoctorMedicationsView() {
   );
 }
 
+function DiscontinueButton({ med, patientId }: { med: any; patientId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const updateMed = useUpdateMedication({
+    mutation: {
+      onSuccess: async () => {
+        toast({
+          title: "Prescription discontinued",
+          description: `${med.medicationName} moved to past medications.`,
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: getGetPatientMedicationsQueryKey(patientId) }),
+          queryClient.invalidateQueries({ queryKey: getGetMyMedicationsQueryKey() }),
+        ]);
+        setOpen(false);
+      },
+      onError: () => {
+        toast({
+          title: "Could not discontinue",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+      },
+    },
+  });
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          data-testid={`button-discontinue-${med.id}`}
+        >
+          <Ban className="h-4 w-4 mr-1.5" />
+          Discontinue
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discontinue {med.medicationName}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will mark the prescription as no longer active. It will still
+            be kept in the patient's medical record under <strong>Past Medications</strong> for
+            both you and the patient to reference.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={updateMed.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={updateMed.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              updateMed.mutate({ id: med.id, data: { isCurrent: false } });
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {updateMed.isPending ? "Discontinuing…" : "Yes, discontinue"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function ViewPatientMedicationsDialog({ variant = "outline" }: { variant?: "default" | "outline" }) {
   const [open, setOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -193,15 +272,51 @@ function ViewPatientMedicationsDialog({ variant = "outline" }: { variant?: "defa
             ) : selectedPatientId && patientMeds ? (
               <div className="space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-3">Current Medications</h3>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    Current Medications
+                    <Badge variant="secondary">{patientMeds.current.length}</Badge>
+                  </h3>
                   {patientMeds.current.length === 0 ? (
                     <p className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg text-center">None</p>
                   ) : (
                     <div className="grid gap-3">
                       {patientMeds.current.map(med => (
-                        <div key={med.id} className="p-3 border rounded-lg bg-card text-sm">
-                          <div className="font-semibold text-primary">{med.medicationName}</div>
-                          <div className="text-muted-foreground mt-1">{med.dosage} • {med.frequency}</div>
+                        <div key={med.id} className="p-3 border rounded-lg bg-card text-sm flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-primary">{med.medicationName}</div>
+                            <div className="text-muted-foreground mt-1">
+                              {[med.dosage, med.frequency].filter(Boolean).join(" • ") || "No dosage info"}
+                            </div>
+                            {med.conditionInfo && (
+                              <div className="text-xs text-muted-foreground mt-1">For: {med.conditionInfo}</div>
+                            )}
+                          </div>
+                          <DiscontinueButton med={med} patientId={selectedPatientId} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
+                    <History className="h-4 w-4" />
+                    Past Medications
+                    <Badge variant="outline">{patientMeds.past.length}</Badge>
+                  </h3>
+                  {patientMeds.past.length === 0 ? (
+                    <p className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg text-center">No past prescriptions on record.</p>
+                  ) : (
+                    <div className="grid gap-3">
+                      {patientMeds.past.map(med => (
+                        <div key={med.id} className="p-3 border rounded-lg bg-muted/30 text-sm">
+                          <div className="font-medium line-through text-muted-foreground">{med.medicationName}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {[med.dosage, med.frequency].filter(Boolean).join(" • ") || "No dosage info"}
+                          </div>
+                          {med.conditionInfo && (
+                            <div className="text-xs text-muted-foreground mt-1">For: {med.conditionInfo}</div>
+                          )}
                         </div>
                       ))}
                     </div>
