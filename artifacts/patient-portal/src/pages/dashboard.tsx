@@ -228,6 +228,13 @@ function PatientDashboard() {
           <p className="text-muted-foreground py-8 text-center text-sm">No active medications.</p>
         )}
       </FeatureCard>
+
+      <FeatureCard href="/resources" icon={BookOpen} title="Health Resources">
+        <p className="text-sm text-muted-foreground mt-2">
+          Trusted articles and guides on staying healthy, managing conditions, and getting the most from your care team.
+        </p>
+        <p className="text-xs text-primary font-medium mt-3">Browse the library →</p>
+      </FeatureCard>
     </div>
   );
 }
@@ -352,6 +359,13 @@ function DoctorDashboard() {
         ) : (
           <p className="text-muted-foreground py-8 text-center text-sm">No recent prescriptions.</p>
         )}
+      </FeatureCard>
+
+      <FeatureCard href="/resources" icon={BookOpen} title="Health Resources">
+        <p className="text-sm text-muted-foreground mt-2">
+          Reference guides and patient-education articles you can share during consultations or assign to your patients.
+        </p>
+        <p className="text-xs text-primary font-medium mt-3">Open the library →</p>
       </FeatureCard>
     </div>
   );
